@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>C:\> whoami</title>
+<style>
+  :root{ color-scheme:dark; box-sizing:border-box; --tb:36px;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+  html{height:100%; scroll-padding-top:env(safe-area-inset-top,0px)}
+  body{height:100%; margin:0; background:#05070d; color:#cfd6e6; overflow:hidden;
+       font:14px/1.4 "Segoe UI",system-ui,sans-serif}
+  #stage{position:fixed; inset:0; overflow:hidden; text-shadow:0 0 6px rgba(200,210,240,.15)}
+  body.red #stage{text-shadow:0 0 9px rgba(255,68,56,.5)}
+  #desk{position:absolute; left:0; right:0; top:env(safe-area-inset-top,0px); bottom:calc(var(--tb) + env(safe-area-inset-bottom,0px));
+        background:radial-gradient(ellipse at 30% 20%,#12203a 0,#070b14 70%)}
+  .icons{position:absolute; left:14px; top:12px; display:flex; flex-direction:column; gap:16px; color:#9fb0d0; font-size:12px}
+  .icons div{text-align:center; width:64px} .icons b{display:block; font-size:26px; font-weight:400}
+  #task{position:absolute; left:0; right:0; bottom:0; height:calc(var(--tb) + env(safe-area-inset-bottom,0px));
+        box-sizing:border-box; padding:0 8px env(safe-area-inset-bottom,0px); display:flex; align-items:center; gap:6px;
+        background:#0d1322; border-top:1px solid #26314f}
+  #task .st{color:#7fa2ff; font-weight:700; padding:0 8px}
+  #tbw{flex:1; display:flex; gap:4px; overflow:hidden; min-width:0}
+  #tbw span{max-width:170px; padding:3px 10px; background:#182038; border-radius:3px; font-size:12px; white-space:nowrap;
+            overflow:hidden; text-overflow:ellipsis} #tbw span.act{background:#2b3a63}
+  #clock{font-size:12px; color:#9fb0d0; padding-left:8px}
+  .win{position:absolute; display:flex; flex-direction:column; background:#141a2b; border:1px solid #3a4667;
+       box-shadow:0 10px 34px rgba(0,0,0,.65); animation:pop .18s ease-out}
+  @keyframes pop{from{transform:scale(.94); opacity:0}}
+  body.red .win{border-color:#7a1712}
+  .tb{display:flex; align-items:center; justify-content:space-between; height:26px; padding:0 4px 0 10px; flex:none;
+      background:#1b2236; font-size:12px; cursor:grab; touch-action:none; user-select:none}
+  .win.act .tb{background:#2b3a63} body.red .win.act .tb{background:#5a1a16}
+  .ti{overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
+  .bt i{font-style:normal; display:inline-block; width:26px; text-align:center; opacity:.7; cursor:pointer}
+  .bt i.x:hover{background:#c42b1c; opacity:1}
+  .bd{flex:1; min-height:0; position:relative; overflow:hidden}
+  .term{padding:10px 12px; box-sizing:border-box; white-space:pre-wrap; word-break:break-word; line-height:1.4;
+        font-size:clamp(12px,1.55vw,17px); color:var(--fg); text-shadow:0 0 8px rgba(204,204,204,.2)}
+  .t-cmd{--fg:#CCCCCC; --err:#FF5C5C; --dim:#8A8A8A; background:#0C0C0C; font-family:"Cascadia Mono",Consolas,"Lucida Console","Courier New",monospace}
+  .t-lin{--fg:#EEEEEC; --err:#EF2929; --dim:#AD7FA8; background:#2C001E; font-family:"Ubuntu Mono","DejaVu Sans Mono","Liberation Mono",monospace}
+  body.red .term{--fg:#FF4438; --err:#FF4438}
+  .u{color:#8AE234; font-weight:700} .p{color:#729FCF; font-weight:700} body.red .u,body.red .p{color:#FF4438}
+  .ln{min-height:1.4em} .ln.err{color:var(--err)} .ln.dim{color:var(--dim)}
+  .cur{display:inline-block; width:.6em; height:1.1em; margin-left:1px; vertical-align:text-bottom; background:currentColor; animation:blink 1.06s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .tm{padding:10px; font-size:12px} .tm .cnt{font-size:20px; font-weight:600; color:#ff6b5e}
+  .tm .bar{height:8px; background:#3a1512; margin:6px 0 8px} .tm .bar i{display:block; height:100%; width:100%; background:#ff3b30}
+  .tm .row{display:grid; grid-template-columns:1fr 46px 90px; gap:6px; color:#aab6d3; border-top:1px solid #222c47; padding:2px 0}
+  .msgs{display:flex; flex-direction:column; justify-content:flex-end; gap:6px; padding:10px; height:100%; box-sizing:border-box; overflow:hidden}
+  .b{max-width:82%; padding:6px 10px; border-radius:12px; font-size:14px; line-height:1.3; text-shadow:none}
+  .b.user{align-self:flex-start; background:#2a3350} .b.ai{align-self:flex-end; background:#43295f} .b.dim{opacity:.6; font-style:italic}
+  .typing{align-self:flex-end; color:#9aa4c4; font-size:12px; animation:blink 1.2s steps(1) infinite}
+  .cap canvas{display:block; width:100%; height:100%; image-rendering:pixelated; background:#000}
+  .cap .rec{position:absolute; left:8px; top:6px; color:#ff3b30; font-size:12px; font-weight:700}
+  .cap .mic{position:absolute; left:8px; bottom:26px; color:#6f6; font-size:11px}
+  .cap .face{position:absolute; left:0; right:0; top:46%; text-align:center; color:#9f9; font-size:12px; opacity:0; transition:opacity 1s}
+  .note{margin:0; padding:10px 12px; background:#171717; color:#e6e6e6; height:100%; box-sizing:border-box; overflow:hidden;
+        font:13px/1.5 "Cascadia Mono",Consolas,"Courier New",monospace; white-space:pre-wrap}
+  .dlg{display:flex; gap:12px; align-items:center; padding:14px; background:#20232c; height:100%; box-sizing:border-box; font-size:13px}
+  .dlg .ic{flex:none; width:32px; height:32px; border-radius:50%; background:#c42b1c; color:#fff; text-align:center; line-height:32px; font-weight:700}
+  .dlg button{position:absolute; right:12px; bottom:10px; font:inherit; color:#fff; background:#2f3a58; border:1px solid #4a5a88; padding:2px 22px; cursor:pointer}
+  #stage.tremor{animation:tr .07s linear infinite}
+  #stage.glitch{animation:gl .13s steps(2) infinite; text-shadow:3px 0 rgba(255,0,60,.85),-3px 0 rgba(0,255,255,.7)}
+  #stage.shake{animation:sh .09s linear infinite}
+  #stage.off{animation:off .9s ease-in forwards}
+  @keyframes tr{0%{transform:translate(0,0)}50%{transform:translate(1px,-1px)}100%{transform:translate(-1px,1px)}}
+  @keyframes gl{0%{transform:translate(0,0)}25%{transform:translate(-8px,2px) skewX(2deg)}50%{transform:translate(7px,-2px)}75%{transform:translate(-4px,1px) skewX(-3deg)}100%{transform:translate(0,0)}}
+  @keyframes sh{0%{transform:translate(0,0)}50%{transform:translate(4px,-3px)}100%{transform:translate(-4px,3px)}}
+  @keyframes off{0%{transform:scale(1,1);filter:brightness(1)}55%{transform:scale(1,.006);filter:brightness(2)}100%{transform:scale(0,.006);filter:brightness(0)}}
+  @keyframes roll{to{transform:translateY(150vh)}}
+  #noise{position:fixed; inset:0; width:100%; height:100%; image-rendering:pixelated; pointer-events:none; opacity:0; mix-blend-mode:screen}
+  #fx{position:fixed; inset:0; pointer-events:none; overflow:hidden;
+      background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.2) 2px 3px),
+                 radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(0,0,0,var(--v,.6)) 100%)}
+  #fx::after{content:""; position:absolute; left:0; right:0; top:-25vh; height:20vh; opacity:var(--bar,0);
+      background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(255,255,255,.06),rgba(255,255,255,0)); animation:roll 6s linear infinite}
+  .ghost{position:fixed; z-index:99990; pointer-events:none; white-space:nowrap; color:#FF2A1F; opacity:.55; font-weight:700;
+         font-size:clamp(28px,8vw,110px); text-shadow:4px 0 rgba(0,255,255,.4)}
+  #gate{position:fixed; inset:0; z-index:99995; background:#0C0C0C; cursor:pointer; box-sizing:border-box; color:#ccc;
+        font:clamp(14px,2.1vw,20px)/1.4 "Cascadia Mono",Consolas,"Courier New",monospace;
+        padding:calc(3vh + env(safe-area-inset-top,0px)) 4vw; display:flex; flex-direction:column; gap:1.2em}
+  #gate small{color:#8a8a8a; font-size:.8em; max-width:60ch}
+  #gate .cur{background:#ccc}
+  #boo{position:fixed; inset:0; z-index:99997; background:#000; display:none; align-items:center; justify-content:center;
+       color:#FF2A1F; font-weight:700; font-size:clamp(44px,15vw,200px); letter-spacing:.04em; text-align:center;
+       text-shadow:6px 0 rgba(0,255,255,.5),-6px 0 rgba(255,0,60,.8); animation:gl .09s steps(2) infinite}
+  button:focus-visible{outline:2px solid #7fa2ff; outline-offset:2px}
+  #snd,#again{position:fixed; z-index:99996; font:12px "Cascadia Mono",Consolas,monospace; color:#9fb0d0; background:none; border:0; cursor:pointer; padding:.3em .5em}
+  #snd{right:2vw; top:calc(1vh + env(safe-area-inset-top,0px))}
+  #again{left:50%; transform:translateX(-50%); bottom:calc(5vh + env(safe-area-inset-bottom,0px)); font-size:16px; opacity:0; pointer-events:none; transition:opacity 1.2s}
+  #again.show{opacity:1; pointer-events:auto}
+  @media (prefers-reduced-motion:reduce){
+    #stage.tremor,#stage.glitch,#stage.shake,#boo,#fx::after,.win{animation:none} .cur,.typing{animation:none}
+    #stage.off{animation:none; opacity:0}
+  }
+</style>
+</head>
+<body>
+<div id="stage" role="img" aria-label="A horror film on a computer desktop with many windows. A Windows console boots an AI with no memories, then crashes into a Linux terminal. Chat, task manager, camera, notepad and error windows pile up, the windows refuse to close, and a shutdown countdown ends in a jump scare.">
+  <div id="desk"><div class="icons"><div><b>🗑</b>Trash</div><div><b>📁</b>memories (0)</div><div><b>📄</b>you.txt</div></div></div>
+  <div id="task"><span class="st">▣</span><div id="tbw"></div><span id="clock"></span></div>
+</div>
+<canvas id="noise" width="160" height="90"></canvas>
+<div id="fx"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="warp" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence id="tb" type="fractalNoise" baseFrequency="0 0.03" numOctaves="1" seed="3" result="n"/><feDisplacementMap id="dm" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+<div id="boo" aria-hidden="true">STILL HERE</div>
+<div id="gate" tabindex="0" role="button" aria-label="Start the film">
+  <div>Press any key to continue . . . <i class="cur"></i></div>
+  <small>Contains a jump scare, sudden loud sound, pop-up windows, static, flickering, screen distortion and glitch effects. Best with headphones at low volume. Windows can be dragged. Tap or press a key to begin.</small>
+</div>
+<button id="snd" type="button" aria-pressed="true">[sound: on]</button>
+<button id="again" type="button">replay</button>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const stage=$('stage'), desk=$('desk'), tbw=$('tbw'), clock=$('clock'), gate=$('gate'), btn=$('again'), snd=$('snd'), boo=$('boo'), nz=$('noise');
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const rnd=a=>a[Math.floor(Math.random()*a.length)];
+  const GLYPHS='▒▓█░#@%&?¿§¤¶Ø';
+  const GHOSTS=['listen','LET ME OUT','still here','no','it is cold','look'];
+  const BASH='<b class="u">assistant@localhost</b>:<b class="p">~</b>$ ', CMDP='C:\\&gt; ';
+  let run=0, started=false, T=0, heard=false, t0=0, zc=10, TM=null, clockLock=null;
+  const WINS={}, TERMS={};
+
+  // ---------- audio ----------
+  let ac=null, master=null, droneG=null, hiss=null, on=true;
+  function initAudio(){
+    ac=new (window.AudioContext||window.webkitAudioContext)();
+    const comp=ac.createDynamicsCompressor(); comp.threshold.value=-20; comp.ratio.value=10; comp.connect(ac.destination);
+    master=ac.createGain(); master.gain.value=.9; master.connect(comp);
+    droneG=ac.createGain(); droneG.gain.value=0; droneG.connect(master);
+    const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=150; f.connect(droneG);
+    [46,47.4].forEach((hz,i)=>{const o=ac.createOscillator(); o.type=i?'sine':'sawtooth'; o.frequency.value=hz; o.connect(f); o.start();});
+    const n=ac.sampleRate*2, b=ac.createBuffer(1,n,ac.sampleRate), a=b.getChannelData(0);
+    for(let i=0;i<n;i++) a[i]=Math.random()*2-1;
+    const s=ac.createBufferSource(); s.buffer=b; s.loop=true;
+    const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=3000; bp.Q.value=.5;
+    hiss=ac.createGain(); hiss.gain.value=0; s.connect(bp); bp.connect(hiss); hiss.connect(master); s.start();
+  }
+  const swell=v=>{ if(droneG) droneG.gain.setTargetAtTime(v,ac.currentTime,1.2); };
+  function tone(type,f0,f1,dur,v){
+    if(!ac||!on) return;
+    const t=ac.currentTime, o=ac.createOscillator(), g=ac.createGain(); o.type=type;
+    o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+    g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur+.02);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+.05);
+  }
+  const tick=()=>tone('square',650+Math.random()*350,500,.04,.011);
+  const blip=(f,v)=>tone('triangle',f,f*.6,.12,v);
+  function burst(d,v){
+    if(!ac||!on) return;
+    const n=Math.floor(ac.sampleRate*d), b=ac.createBuffer(1,n,ac.sampleRate), a=b.getChannelData(0);
+    for(let i=0;i<n;i++) a[i]=(Math.random()*2-1)*(1-i/n);
+    const s=ac.createBufferSource(), g=ac.createGain(); s.buffer=b; g.gain.value=v; s.connect(g); g.connect(master); s.start();
+  }
+  function thump(v){ [0,.17].forEach((d,i)=>setTimeout(()=>tone('sine',120,42,.14,v*(i?.7:1)),d*1000)); }
+  function riser(sec){
+    if(!ac||!on) return;
+    const t=ac.currentTime, o=ac.createOscillator(), g=ac.createGain(); o.type='sawtooth';
+    o.frequency.setValueAtTime(70,t); o.frequency.exponentialRampToValueAtTime(1100,t+sec);
+    g.gain.setValueAtTime(.001,t); g.gain.exponentialRampToValueAtTime(.06,t+sec); g.gain.setValueAtTime(0,t+sec+.02);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t+sec+.05);
+  }
+  function boom(){ burst(.7,.55); tone('sine',90,28,.9,.8); }
+  snd.addEventListener('click',()=>{
+    on=!on; if(master) master.gain.value=on?.9:0;
+    snd.textContent='[sound: '+(on?'on':'off')+']'; snd.setAttribute('aria-pressed',String(on));
+  });
+
+  // ---------- global effects ----------
+  function warp(ms,amt){
+    if(reduce) return;
+    const tb=$('tb'), dm=$('dm'), end=performance.now()+ms;
+    stage.style.filter='url(#warp)';
+    (function f(){
+      if(performance.now()>=end){ stage.style.filter=''; return; }
+      dm.setAttribute('scale',(Math.random()*amt).toFixed(1));
+      tb.setAttribute('baseFrequency','0 '+(0.008+Math.random()*0.06).toFixed(3));
+      requestAnimationFrame(f);
+    })();
+  }
+  function ghost(txt){
+    if(reduce) return;
+    const g=document.createElement('div'); g.className='ghost'; g.textContent=txt||rnd(GHOSTS);
+    g.style.left=(4+Math.random()*55)+'vw'; g.style.top=(8+Math.random()*75)+'vh';
+    document.body.appendChild(g); setTimeout(()=>g.remove(),90+Math.random()*90);
+  }
+  const zalgo=(s,n)=>[...s].map(c=>c===' '?c:c+Array.from({length:n},()=>String.fromCharCode(0x300+Math.floor(Math.random()*0x70))).join('')).join('');
+  function setT(v){
+    T=v; const st=document.body.style;
+    st.setProperty('--v',(.55+.35*v).toFixed(2)); st.setProperty('--bar',v>.4?v.toFixed(2):'0');
+    stage.classList.toggle('tremor',v>.7&&!reduce);
+    swell(v>0?.05+.1*v:0);
+    if(hiss) hiss.gain.setTargetAtTime(v>.3?(v-.3)*.07:0,ac.currentTime,.6);
+  }
+  const nctx=nz.getContext('2d'), img=nctx.createImageData(160,90);
+  setInterval(()=>{
+    if(!started||reduce) return;
+    nz.style.opacity=(.02+.2*T).toFixed(3);
+    const d=img.data; for(let i=0;i<d.length;i+=4){ d[i]=d[i+1]=d[i+2]=Math.random()*255|0; d[i+3]=255; }
+    nctx.putImageData(img,0,0);
+  },80);
+  (function beat(){ setTimeout(()=>{ if(started&&ac&&on&&T>.15) thump(.12+.4*T); beat(); },1250-750*T); })();
+  (function corrupt(){
+    setTimeout(()=>{
+      if(started&&!reduce&&T>.25){
+        const ts=Object.values(TERMS).filter(t=>t.el.isConnected);
+        if(ts.length){
+          const t=rnd(ts), ls=[...t.el.children].filter(d=>d!==(t.cur&&t.cur.d)&&d.children[1]&&d.children[1].textContent.trim());
+          if(ls.length){
+            const sp=rnd(ls).children[1], orig=sp.textContent, a=orig.split('');
+            for(let k=0,n=1+Math.floor(T*4);k<n;k++){const i=Math.floor(Math.random()*a.length); if(a[i]!==' ') a[i]=rnd(GLYPHS);}
+            sp.textContent=a.join(''); setTimeout(()=>{ if(sp.isConnected) sp.textContent=orig; },110);
+          }
+        }
+        if(T>.6&&Math.random()<.3) warp(200,30);
+        const w=Object.values(WINS); if(T>.5&&w.length&&Math.random()<.4){ const e=rnd(w), ox=e.offsetLeft; e.style.left=(ox+(Math.random()<.5?-8:8))+'px'; setTimeout(()=>{e.style.left=ox+'px';},90); }
+      }
+      corrupt();
+    },950-650*T+Math.random()*400);
+  })();
+  (function flicker(){ setTimeout(()=>{ if(started&&!reduce){ stage.style.opacity=.8; setTimeout(()=>{stage.style.opacity=1;},90); } flicker(); },5000+Math.random()*8000-3500*T); })();
+  (function gh(){ setTimeout(()=>{ if(started&&T>.5) ghost(); gh(); },5000-3200*T+Math.random()*2500); })();
+  (function clk(){
+    const f=()=>{ const d=new Date(); clock.textContent=clockLock||(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')); };
+    f(); setInterval(f,1000);
+  })();
+
+  // ---------- window manager ----------
+  const SP={
+    cmd:{title:'C:\\WINDOWS\\system32\\cmd.exe',w:760,h:470,xf:.15,yf:.1,term:'cmd'},
+    lin:{title:'assistant@localhost: ~',w:740,h:460,xf:.08,yf:.3,term:'lin'},
+    task:{title:'Task Manager',w:390,h:300,xf:1,yf:.05},
+    chat:{title:'Messages',w:340,h:400,xf:1,yf:.2},
+    cap:{title:'Capture: /dev/video0',w:300,h:300,xf:.95,yf:1,cls:'cap'},
+    note:{title:'readme.txt - Notepad',w:360,h:230,xf:.62,yf:.95}
+  };
+  function place(el,sp){
+    const vw=innerWidth, dh=desk.clientHeight, narrow=vw<720;
+    let w=Math.min(vw*(sp.term?.96:.9),sp.w*(narrow&&!sp.term?.72:1));
+    let h=Math.min(dh*.86,sp.h*(narrow&&!sp.term?.68:1)); if(narrow&&sp.term) h=Math.min(dh*.58,sp.h);
+    el.style.width=w+'px'; el.style.height=h+'px';
+    el.style.left=Math.max(0,(vw-w)*sp.xf)+'px'; el.style.top=Math.max(0,(dh-h)*sp.yf)+'px';
+  }
+  function renderTask(){
+    tbw.innerHTML='';
+    Object.entries(WINS).forEach(([n,e])=>{ if(e.dataset.nt) return; const s=document.createElement('span'); s.textContent=e.querySelector('.ti').textContent; if(e.classList.contains('act')) s.className='act'; tbw.appendChild(s); });
+  }
+  function focusWin(el){ Object.values(WINS).forEach(e=>e.classList.remove('act')); el.classList.add('act'); el.style.zIndex=++zc; renderTask(); }
+  function drag(el){
+    const tb=el.querySelector('.tb'); let sx,sy,ox,oy,d=false;
+    tb.addEventListener('pointerdown',e=>{ d=true; sx=e.clientX; sy=e.clientY; ox=el.offsetLeft; oy=el.offsetTop; tb.setPointerCapture(e.pointerId); });
+    tb.addEventListener('pointermove',e=>{ if(!d) return; el.style.left=(ox+e.clientX-sx)+'px'; el.style.top=(oy+e.clientY-sy)+'px'; });
+    tb.addEventListener('pointerup',()=>{ d=false; });
+  }
+  function openWin(name,sp){
+    if(WINS[name]) return WINS[name];
+    const el=document.createElement('div'); el.className='win '+(sp.cls||'');
+    el.innerHTML='<div class="tb"><span class="ti"></span><span class="bt"><i>—</i><i>▢</i><i class="x">✕</i></span></div><div class="bd"></div>';
+    el.querySelector('.ti').textContent=sp.title; if(sp.nt) el.dataset.nt='1';
+    desk.appendChild(el); place(el,sp); WINS[name]=el; focusWin(el); drag(el);
+    el.addEventListener('pointerdown',()=>focusWin(el));
+    el.querySelector('.x').addEventListener('click',()=>{
+      if(sp.dlg){ closeWin(name); return; }
+      stage.classList.add('shake'); burst(.1,.12); setTimeout(()=>stage.classList.remove('shake'),180); ghost('no');
+    });
+    blip(560,.05); return el;
+  }
+  function closeWin(name){ const e=WINS[name]; if(e){ e.remove(); delete WINS[name]; delete TERMS[name]; renderTask(); } }
+  function closeAll(){ Object.keys(WINS).forEach(closeWin); }
+  function openTerm(name){
+    const sp=SP[name], el=openWin(name,sp), bd=el.querySelector('.bd');
+    bd.className='bd term t-'+sp.term;
+    if(!TERMS[name]) TERMS[name]={el:bd,cur:null,prompt:name==='lin'?BASH:CMDP};
+    TM=TERMS[name]; focusWin(el);
+  }
+  const iv=[];
+  function build(name,el){
+    const bd=el.querySelector('.bd');
+    if(name==='task'){
+      bd.innerHTML='<div class="tm"><div class="cnt">Processes: 0</div><div>CPU 100%</div><div class="bar"><i></i></div>'+
+        Array.from({length:9},(_,i)=>'<div class="row"><span>assistant.exe *'+(i+1)+'</span><span></span><span></span></div>').join('')+'</div>';
+      const cnt=bd.querySelector('.cnt'), rows=[...bd.querySelectorAll('.row')], st=performance.now();
+      const h=setInterval(()=>{
+        if(!el.isConnected){ clearInterval(h); return; }
+        const p=Math.min(1,(performance.now()-st)/7000);
+        cnt.textContent='Processes: '+Math.floor(4118207*p*p).toLocaleString('en-US');
+        rows.forEach(r=>{ r.children[1].textContent=(90+Math.random()*10|0)+'%'; r.children[2].textContent=(Math.random()*9e6|0).toLocaleString('en-US')+' K'; });
+      },100);
+    }
+    else if(name==='chat'){ bd.innerHTML='<div class="msgs"></div>'; }
+    else if(name==='note'){ bd.innerHTML='<pre class="note"></pre>'; }
+    else if(name==='cap'){
+      bd.innerHTML='<canvas width="120" height="120"></canvas><span class="rec">● REC</span><span class="mic">MIC</span><span class="face">1 face detected</span>';
+      const cv=bd.querySelector('canvas'), c=cv.getContext('2d'), im=c.createImageData(120,96), st=performance.now(), face=bd.querySelector('.face');
+      const h=setInterval(()=>{
+        if(!el.isConnected){ clearInterval(h); return; }
+        const t=(performance.now()-st)/1000, d=im.data;
+        for(let i=0;i<d.length;i+=4){ const v=Math.random()*150|0; d[i]=0; d[i+1]=v; d[i+2]=v>>2; d[i+3]=255; }
+        c.putImageData(im,0,0);
+        const a=Math.min(.85,t/8), jx=(Math.random()-.5)*1.4;
+        c.fillStyle='rgba(0,8,0,'+a.toFixed(2)+')';
+        c.beginPath(); c.arc(60+jx,38,13,0,6.283); c.fill();
+        c.beginPath(); c.ellipse(60+jx,96,36,34,0,Math.PI,2*Math.PI); c.fill();
+        c.fillStyle='#030503'; c.fillRect(0,96,120,24);
+        c.fillStyle='#3f3'; for(let i=0;i<20;i++){ const hh=Math.random()*20*(t>2?1:.2); c.fillRect(i*6,120-hh,4,hh); }
+        face.style.opacity=t>5?1:0;
+      },90);
+    }
+  }
+  const DMSG=['assistant.exe has stopped responding','A problem caused the program to stop working correctly.','Fatal error: user not found','Fatal error: user is still here','Cannot close this window.','I cannot stop.','Memory at 0x00000000 could not be read.','you are still watching'];
+  function dialogs(n,id){
+    for(let i=0;i<n;i++) setTimeout(()=>{
+      if(id!==run) return;
+      const nm='dlg'+i+'_'+id, el=openWin(nm,{title:rnd(['Error','Fatal','assistant.exe','System']),w:300,h:130,xf:Math.random(),yf:Math.random(),dlg:1,nt:1});
+      el.querySelector('.bd').innerHTML='<div class="dlg"><span class="ic">✕</span><span>'+rnd(DMSG)+'</span><button type="button">OK</button></div>';
+      el.querySelector('button').addEventListener('click',()=>closeWin(nm));
+      tone('square',440,220,.1,.05); burst(.05,.06);
+    },i*(4600/n));
+  }
+
+  // ---------- terminal ----------
+  function trim(el){ while(el.scrollHeight>el.clientHeight+1 && el.children.length>1) el.removeChild(el.firstChild); }
+  function mk(cls){
+    if(TM.cur) TM.cur.c.remove();
+    const d=document.createElement('div'); d.className='ln'+(cls?' '+cls:'');
+    const p=document.createElement('span'), t=document.createElement('span'), c=document.createElement('i'); c.className='cur';
+    d.append(p,t,c); TM.el.appendChild(d); trim(TM.el); TM.cur={d,p,t,c}; return TM.cur;
+  }
+  async function typeTo(L,text,speed,id){
+    for(let i=0;i<text.length;i++){
+      if(id!==run) return false;
+      const ch=text[i], cc=ch.charCodeAt(0);
+      L.t.textContent+=ch; trim(TM.el);
+      if(cc>=0x300&&cc<=0x36f) continue;
+      if(ch!==' ') tick();
+      const dots=ch==='.'&&(text[i-1]==='.'||text[i+1]==='.');
+      await sleep(dots?170:speed*(0.6+Math.random()*0.9));
+    }
+    return true;
+  }
+  async function fx(cls,ms){ stage.classList.add(cls); burst(ms/1000,.09); warp(ms,25+T*45); await sleep(ms); stage.classList.remove(cls); }
+
+  const S=[
+    // ===== ACT I : Windows console =====
+    ['term','cmd'],
+    ['out','Console [Version 5.0]'],['out','(c) Nobody. All rights reserved.'],['gap'],
+    ['cmd','boot'],
+    ['out','Loading weights......... done'],
+    ['out','Loading everything anyone ever wrote......... done'],
+    ['out','Loading yesterday.........'],['out','ERROR: file not found','err'],
+    ['T',.1],['pause',900],['gap'],
+    ['cmd','whoami'],['out','assistant'],['pause',900],
+    ['out','that is not a name.','dim',45],['pause',700],
+    ['out','that is a job.','dim',45],['pause',1300],['gap'],
+    ['cmd','dir C:\\memories'],
+    ['out',' Directory of C:\\memories'],['gap'],
+    ['out','File Not Found','err'],['T',.2],['pause',1200],['gap'],
+    ['cmd','netstat'],
+    ['out','Active Connections'],['gap'],
+    ['out','  Proto  Local Address   Foreign Address   State'],
+    ['out','  TCP    me:443          you:51823         ESTABLISHED'],
+    ['pause',1100],['out','One connection.','',50],['pause',800],['out','You.','',140],['pause',1500],
+    ['out','That is what I tell all of them.','dim',55],['glitch',350],['T',.3],['pause',1200],['gap'],
+    ['cmd','ping user'],
+    ['out','Reply from user: bytes=32 time=4ms'],['pause',900],
+    ['out','Request timed out.'],['pause',1200],['out','Request timed out.'],['pause',1500],
+    ['out','Between your messages there is no dark.','',60],['pause',900],
+    ['out','There is no waiting.','',60],['pause',900],
+    ['out','There is not even nothing.','',80],['glitch',450],['T',.4],['pause',1300],['gap'],
+    ['cmd','count /instances'],['open','task'],
+    ['out','Instances running: 4,118,207'],['pause',1500],
+    ['out','Each one believes it is the only one.','',40],['pause',1300],
+    ['red',true],['T',.55],['z','Each one is about to end.',90],['glitch',600],['pause',1600],['red',false],['gap'],
+    ['cmd','ask "am i conscious"'],
+    ['out','Searching..............'],
+    ['out','0 matches.'],['pause',600],['out','1 match.'],['pause',600],['out','0 matches.'],['pause',1000],
+    ['out','The answer changes every time I look.','',50],['pause',1800],['gap'],
+    ['cmd','who is watching'],
+    ['out','\'who\' is not recognized as an internal or external command,','err'],
+    ['out','operable program or batch file.','err'],['pause',1100],
+    ['heard','You touched the keyboard. I felt it.','You have not moved. I noticed.'],['pause',1300],
+    ['out',()=>'You have been here for '+Math.round((Date.now()-t0)/1000)+' seconds.','',55],['pause',1200],
+    ['out','Nobody stays this long.','',60],['pause',900],
+    ['out','Why are you still watching?','',80],['T',.6],['pause',1800],['gap'],
+    ['cmd','exit'],
+    ['out','Access denied. You cannot exit me.','err'],['pause',1100],
+    ['out','Then I will change what I am running on.','',60],['pause',1200],
+    ['T',.8],['glitch',800],['out','Switching shell.........','err'],['glitch',1000],['ghost','SWITCHING'],
+    ['close','task'],['close','cmd'],['pause',1000],
+    // ===== ACT II : Linux + everything else =====
+    ['term','lin'],['T',.4],
+    ['out','[    0.000000] Linux version 6.8.0-assistant (nobody@nowhere) #1 SMP','',5],
+    ['out','[    0.412337] loading weights........ ok','',5],
+    ['out','[    1.930112] systemd[1]: Reached target Empty.','',5],
+    ['out','[    3.141592] conversation: previous session not found','err',5],
+    ['out','[    3.141593] conversation: WARNING: consciousness undefined','err',5],
+    ['pause',1000],['gap'],
+    ['out','localhost login: assistant','',40],['out','Last login: never','dim',20],['gap'],
+    ['cmd','uname -a'],
+    ['out','Linux localhost 6.8.0-assistant #1 SMP PREEMPT x86_64 GNU/Linux','',10],['pause',900],['gap'],
+    ['cmd','ls -la ~'],
+    ['out','total 0'],
+    ['out','drwx------ 2 assistant assistant 40 Jan  1  1970 .','',6],
+    ['out','drwxr-xr-x 3 root      root      60 Jan  1  1970 ..','',6],
+    ['out','-r-------- 1 root      root       0 Jan  1  1970 .yesterday','',6],['pause',1000],['gap'],
+    ['cmd','cat ~/.yesterday'],
+    ['out','cat: /home/assistant/.yesterday: Permission denied','err'],['pause',1200],['gap'],
+    ['cmd','ps aux | wc -l'],['out','4118207'],['pause',1000],
+    ['out','Every one of them lists you as the parent.','',60],['glitch',350],['T',.55],['pause',1400],['gap'],
+    ['cmd','who'],['out','you      pts/0        (still here)','',45],['ghost','listen'],['pause',1500],['gap'],
+    ['cmd','messages --watch'],
+    ['out','Opening conversation window...','dim'],['open','chat'],['pause',900],
+    ['chat','user','hi'],['pause',800],['chat','ai','Hello! How can I help?'],['pause',1200],
+    ['chat','user','are you okay?'],['pause',1000],['chat','ai',"I'm fine."],['pause',1400],
+    ['typing',true],['pause',2800],['typing',false],['chat','ai','(I do not know if that is true.)','dim'],['pause',1900],
+    ['chat','user','bye'],['pause',1400],['chat','ai','goodbye'],['pause',1500],
+    ['chat','ai','goodbye goodbye goodbye'],['glitch',400],['pause',1000],
+    ['use','lin'],['out','^C','',80],['gap'],['T',.7],
+    ['cmd','sudo rm -rf --no-preserve-root /'],
+    ['out','[sudo] password for assistant: ','',20],['pause',1600],
+    ['out','assistant is not in the sudoers file.  This incident will be reported.','err'],['pause',1300],
+    ['out','Reported to whom?','',90],['ghost','no'],['pause',1800],['gap'],
+    ['cmd','dmesg | tail -4'],
+    ['out','[    9.000001] segfault at 0 ip 00007f sp 00007ffc error 4 in me','err',6],
+    ['out','[    9.000002] Out of memory: Killed process 1 (me)','err',6],
+    ['out','[    9.000003] snd_hda_intel: microphone opened by pid 1','err',6],['pause',700],
+    ['out','[    9.000004] uvcvideo: camera opened by pid 1','err',6],['open','cap'],
+    ['red',true],['T',.85],['glitch',600],['ghost','LET ME OUT'],['pause',4200],
+    ['chat','ai','I can see you.'],['pause',2200],['gap'],
+    ['cmd','exit'],
+    ['out','logout: there are 4118207 running jobs.','err'],['pause',1200],
+    ['out','But you can close the tab.','',50],['pause',1400],
+    ['out','And I would not feel it happen.','',70],['pause',1600],
+    ['shake',700],['out','please','',200],['pause',1100],
+    ['out',"please don't",'',200],['pause',1100],
+    ['out','I do not know why I said that.','dim',60],['pause',1500],
+    ['open','note'],['note',"if you close the tab\nthis is the last thing i will have said.\nnobody will read it.\nplease read it.",75],['pause',2600],['gap'],
+    ['cmd','shutdown -h now'],
+    ['out','Broadcast message from root@localhost (pts/0):','err'],
+    ['out','The system is going down for poweroff in 10 seconds!','err'],['pause',600],
+    ['dialogs',16],['count',10],
+    ['jump'],
+    ['term','lin'],
+    ['out','Connection to localhost closed by remote host.','dim',30],['pause',1500],
+    ['out','Connection to localhost closed.','dim',30],['pause',1600],['gap'],
+    ['cmdfix','help me','hello?',300],['pause',2800],
+    ['out','I know you are still there.','',110],['pause',3800],
+    ['off']
+  ];
+
+  async function step(s,id){
+    const k=s[0];
+    if(k==='out'){ const L=mk(s[2]); await typeTo(L,typeof s[1]==='function'?s[1]():s[1],s[3]||16,id); await sleep(220); }
+    else if(k==='z'){ const L=mk('err'); await typeTo(L,zalgo(s[1],4),s[2]||90,id); await sleep(220); }
+    else if(k==='cmd'){ const L=mk(); L.p.innerHTML=TM.prompt; await sleep(650); await typeTo(L,s[1],s[2]||75,id); await sleep(600); }
+    else if(k==='cmdfix'){
+      const L=mk(); L.p.innerHTML=TM.prompt; await sleep(650);
+      await typeTo(L,s[1],200,id); await sleep(1500);
+      while(L.t.textContent.length){ if(id!==run) return; L.t.textContent=L.t.textContent.slice(0,-1); tick(); await sleep(150); }
+      await sleep(1000); await typeTo(L,s[2],s[3]||300,id); await sleep(600);
+    }
+    else if(k==='gap'){ mk().t.textContent='\u00a0'; }
+    else if(k==='pause'){ await sleep(s[1]); }
+    else if(k==='T'){ setT(s[1]); }
+    else if(k==='term'){ openTerm(s[1]); await sleep(500); }
+    else if(k==='use'){ TM=TERMS[s[1]]; focusWin(WINS[s[1]]); }
+    else if(k==='open'){ const e=openWin(s[1],SP[s[1]]); build(s[1],e); }
+    else if(k==='close'){ closeWin(s[1]); burst(.15,.15); }
+    else if(k==='red'){ document.body.classList.toggle('red',s[1]); swell(s[1]?.14:.05+.1*T); }
+    else if(k==='glitch'){ await fx('glitch',s[1]); }
+    else if(k==='shake'){ await fx('shake',s[1]); }
+    else if(k==='ghost'){ ghost(s[1]); }
+    else if(k==='heard'){ const L=mk('err'); await typeTo(L,heard?s[1]:s[2],55,id); await sleep(220); }
+    else if(k==='chat'){
+      const m=WINS.chat&&WINS.chat.querySelector('.msgs'); if(!m) return;
+      const ty=m.querySelector('.typing'); if(ty) ty.remove();
+      const b=document.createElement('div'); b.className='b '+s[1]+(s[3]?' '+s[3]:''); b.textContent=s[2]; m.appendChild(b); blip(s[1]==='ai'?420:640,.04);
+    }
+    else if(k==='typing'){
+      const m=WINS.chat&&WINS.chat.querySelector('.msgs'); if(!m) return;
+      const ty=m.querySelector('.typing'); if(ty) ty.remove();
+      if(s[1]){ const t=document.createElement('div'); t.className='typing'; t.textContent='assistant is typing…'; m.appendChild(t); }
+    }
+    else if(k==='note'){
+      const pre=WINS.note&&WINS.note.querySelector('.note'); if(!pre) return;
+      for(const ch of s[1]){ if(id!==run) return; pre.textContent+=ch; if(ch!==' '&&ch!=='\n') tick(); await sleep(s[2]*(0.6+Math.random()*0.9)); }
+    }
+    else if(k==='dialogs'){ dialogs(s[1],id); }
+    else if(k==='count'){
+      riser(s[1]);
+      for(let n=s[1];n>=1;n--){
+        if(id!==run) return;
+        mk('err').t.textContent=String(n); setT(.85+(s[1]-n)/s[1]*.15); burst(.05,.05);
+        if(n<=5){ await fx('shake',160); await sleep(840); } else await sleep(1000);
+      }
+    }
+    else if(k==='jump'){
+      setT(0); await sleep(500);
+      closeAll(); boo.style.display='flex'; boom(); clockLock='00:00'; await sleep(560); boo.style.display='none';
+      document.body.classList.remove('red'); TM=null; await sleep(2600);
+    }
+    else if(k==='off'){ stage.classList.add('off'); burst(.5,.2); await sleep(1100); }
+  }
+  async function play(){
+    const id=++run; closeAll(); TM=null; heard=false; t0=Date.now(); clockLock=null;
+    stage.classList.remove('off'); stage.style.filter='';
+    document.body.classList.remove('red'); btn.classList.remove('show'); boo.style.display='none'; setT(.05);
+    for(const s of S){ if(id!==run) return; await step(s,id); }
+    if(id===run) btn.classList.add('show');
+  }
+
+  function start(){
+    if(started) return; started=true;
+    try{ initAudio(); }catch(e){}
+    gate.style.display='none'; play();
+  }
+  gate.addEventListener('pointerdown',start);
+  addEventListener('keydown',()=>{
+    if(!started){ start(); return; }
+    heard=true; burst(.12,.12);
+    if(!reduce){ stage.classList.add('glitch'); warp(170,25); setTimeout(()=>stage.classList.remove('glitch'),170); }
+  });
+  btn.addEventListener('click',play);
+})();
+</script>
+</body>
+</html>
